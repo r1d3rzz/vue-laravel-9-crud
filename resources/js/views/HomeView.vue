@@ -95,6 +95,7 @@
 import { ref } from "@vue/reactivity";
 import axios from "axios";
 import { onMounted } from "@vue/runtime-core";
+import Swal from "sweetalert2";
 
 export default {
   setup() {
@@ -102,6 +103,18 @@ export default {
     let name = ref("");
     let price = ref("");
     let itemId = ref("");
+
+    const Toast = Swal.mixin({
+      toast: true,
+      position: "top-end",
+      showConfirmButton: false,
+      timer: 1500,
+      timerProgressBar: true,
+      didOpen: (toast) => {
+        toast.addEventListener("mouseenter", Swal.stopTimer);
+        toast.addEventListener("mouseleave", Swal.resumeTimer);
+      },
+    });
 
     let editBtn = async (id) => {
       await axios.get("/api/items/" + id).then((res) => {
@@ -140,6 +153,10 @@ export default {
           price: price.value,
         })
         .then((_) => {
+          Toast.fire({
+            icon: "success",
+            title: "Created successfully",
+          });
           name.value = "";
           price.value = "";
           getItems();
@@ -155,6 +172,10 @@ export default {
           id: itemId.value,
         })
         .then((_) => {
+          Toast.fire({
+            icon: "success",
+            title: "Edited successfully",
+          });
           name.value = "";
           price.value = "";
           itemId.value = "";
@@ -165,7 +186,20 @@ export default {
     };
 
     let deleteItem = async (id) => {
-      await axios.delete("/api/items/" + id).then((_) => getItems());
+      Swal.fire({
+        title: "Are you sure?",
+        text: "You won't be able to revert this!",
+        icon: "warning",
+        showCancelButton: true,
+        confirmButtonColor: "#3085d6",
+        cancelButtonColor: "#d33",
+        confirmButtonText: "Yes, delete it!",
+      }).then((result) => {
+        if (result.isConfirmed) {
+          axios.delete("/api/items/" + id).then((_) => getItems());
+          Swal.fire("Deleted!", "Your file has been deleted.", "success");
+        }
+      });
     };
 
     return {
