@@ -21,10 +21,7 @@ class ItemController extends Controller
         $item = Item::find($id);
 
         if($item){
-            return response()->json([
-                'status' => true,
-                'item' => $item->get()
-            ],200);
+            return $item;
         }
 
         return "item not found!";

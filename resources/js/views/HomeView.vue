@@ -5,28 +5,40 @@
         <div class="col-md-4">
           <div class="card mb-3">
             <div class="card-body">
-              <div class="mb-3">
-                <label for="name">Name</label>
-                <input type="text" id="name" class="form-control" />
-              </div>
-
-              <div class="mb-3">
-                <label for="price">Price</label>
-                <input type="text" id="price" class="form-control" />
-              </div>
-
-              <div class="d-flex justify-content-end">
-                <div v-if="isEdit">
-                  <button class="btn btn-sm btn-warning">
-                    <small class="fas fa-edit me-1"></small>Edit
-                  </button>
+              <form @submit.prevent="isEdit ? editItem() : createItem()">
+                <div class="mb-3">
+                  <label for="name">Name</label>
+                  <input
+                    type="text"
+                    id="name"
+                    class="form-control"
+                    v-model="name"
+                  />
                 </div>
-                <div v-else>
-                  <button class="btn btn-sm btn-primary">
-                    <small class="fas fa-plus-circle me-1"></small>Create
-                  </button>
+
+                <div class="mb-3">
+                  <label for="price">Price</label>
+                  <input
+                    type="text"
+                    id="price"
+                    class="form-control"
+                    v-model="price"
+                  />
                 </div>
-              </div>
+
+                <div class="d-flex justify-content-end">
+                  <div v-if="isEdit">
+                    <button class="btn btn-sm btn-warning">
+                      <small class="fas fa-edit me-1"></small>Edit
+                    </button>
+                  </div>
+                  <div v-else>
+                    <button class="btn btn-sm btn-primary">
+                      <small class="fas fa-plus-circle me-1"></small>Create
+                    </button>
+                  </div>
+                </div>
+              </form>
             </div>
           </div>
         </div>
@@ -49,48 +61,20 @@
                     </tr>
                   </thead>
                   <tbody>
-                    <tr>
-                      <th scope="row">1</th>
-                      <td>Mark</td>
-                      <td>Otto</td>
+                    <tr v-for="item in items" :key="item.id">
+                      <th scope="row">{{ item.id }}</th>
+                      <td>{{ item.name }}</td>
+                      <td>${{ item.price }}.00</td>
                       <td class="text-center">
-                        <button class="btn btn-sm btn-danger mx-1">
-                          <i class="fas fa-trash-alt"></i>
-                        </button>
                         <button
-                          class="btn btn-sm btn-warning mx-1"
-                          @click="editBtn"
+                          class="btn btn-sm btn-danger mx-1"
+                          @click="deleteItem(item.id)"
                         >
-                          <i class="fas fa-edit"></i>
-                        </button>
-                      </td>
-                    </tr>
-                    <tr>
-                      <th scope="row">2</th>
-                      <td>Jacob</td>
-                      <td>Thornton</td>
-                      <td class="text-center">
-                        <button class="btn btn-sm btn-danger mx-1">
                           <i class="fas fa-trash-alt"></i>
                         </button>
                         <button
                           class="btn btn-sm btn-warning mx-1"
-                          @click="editBtn"
-                        >
-                          <i class="fas fa-edit"></i>
-                        </button>
-                      </td>
-                    </tr>
-                    <tr>
-                      <th scope="row">3</th>
-                      <td colspan="2">Larry the Bird</td>
-                      <td class="text-center">
-                        <button class="btn btn-sm btn-danger mx-1">
-                          <i class="fas fa-trash-alt"></i>
-                        </button>
-                        <button
-                          class="btn btn-sm btn-warning mx-1"
-                          @click="editBtn"
+                          @click="editBtn(item.id)"
                         >
                           <i class="fas fa-edit"></i>
                         </button>
@@ -109,19 +93,92 @@
 
 <script>
 import { ref } from "@vue/reactivity";
+import axios from "axios";
+import { onMounted } from "@vue/runtime-core";
+
 export default {
   setup() {
     let isEdit = ref(false);
+    let name = ref("");
+    let price = ref("");
+    let itemId = ref("");
 
-    let editBtn = () => {
+    let editBtn = async (id) => {
+      await axios.get("/api/items/" + id).then((res) => {
+        name.value = res.data.name;
+        price.value = res.data.price;
+        itemId.value = res.data.id;
+      });
       isEdit.value = true;
     };
 
     let createBtn = () => {
+      name.value = "";
+      price.value = "";
       isEdit.value = false;
     };
 
-    return { isEdit, editBtn, createBtn };
+    let items = ref([]);
+
+    let getItems = async () => {
+      await axios
+        .get("/api/items")
+        .then((res) => {
+          items.value = res.data.items;
+        })
+        .catch((err) => console.log(err.message));
+    };
+
+    onMounted(() => {
+      return getItems();
+    });
+
+    let createItem = async () => {
+      await axios
+        .post("/api/items", {
+          name: name.value,
+          price: price.value,
+        })
+        .then((_) => {
+          name.value = "";
+          price.value = "";
+          getItems();
+        })
+        .catch((err) => console.log(err.message));
+    };
+
+    let editItem = async () => {
+      await axios
+        .put("/api/items/" + itemId.value, {
+          name: name.value,
+          price: price.value,
+          id: itemId.value,
+        })
+        .then((_) => {
+          name.value = "";
+          price.value = "";
+          itemId.value = "";
+          isEdit.value = false;
+          getItems();
+        })
+        .catch((err) => console.log(err.message));
+    };
+
+    let deleteItem = async (id) => {
+      await axios.delete("/api/items/" + id).then((_) => getItems());
+    };
+
+    return {
+      isEdit,
+      editBtn,
+      createBtn,
+      items,
+      createItem,
+      editItem,
+      name,
+      price,
+      deleteItem,
+    };
   },
 };
 </script>
